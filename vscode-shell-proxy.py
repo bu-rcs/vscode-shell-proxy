@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.12
 #
 # This script acts as a proxy for the Microsoft Visual Studio Code application's
 # Remote-SSH extension.  Remote-SSH must be setup to allow for remote command to
 # be included in host configurations; the RemoteCommand is set to this script
 # with various options permissible.
 #
-# Slurm is used to start an interactive shell on a compute node.  The stdio channels
+# qrsh is used to start an interactive shell on a compute node.  The stdio channels
 # for that remote shell are proxied by this script to the stdio channels of the ssh
 # session that executed this script.  In essence, i/o to/from the VSCode application
 # flow through this script to the remote shell.
@@ -28,6 +28,7 @@ import re
 import sys
 import os
 from enum import Enum
+import shlex
 
 # This is the local TCP port on which this script is listening:
 proxyPort = None
@@ -304,9 +305,15 @@ async def runloop():
     proxyThread.start()
     
     # Start the remote shell:
-    remoteShellCmd = ['workgroup', '-g', cliArgs.workgroup, '--command', '@', '--', 'salloc' ]
-    if cliArgs.sallocArgs:
-        remoteShellCmd.extend(cliArgs.sallocArgs)
+    #remoteShellCmd = ['workgroup', '-g', cliArgs.workgroup, '--command', '@', '--', 'salloc' ]
+    remoteShellCmd = 'qrsh'
+    if cliArgs.qrshArgs:
+        # cliArgs.qrshArgs is a list because its argument has the "append"
+        # action. Turn it into a string separate by spaces.
+        # This makes remoteShellCmd into a string like:  "qrsh -P proj -pe omp 4"
+        remoteShellCmd += ' '  + ' '.join(cliArgs.qrshArgs)
+    # Use shlex to put the command string into the proper list format
+    remoteShellCmd = shlex.split(remoteShellCmd)
     logging.debug('Command to launch remote shell: "%s"', ' '.join(remoteShellCmd))
     remoteShellProc = subprocess.Popen(
                                 remoteShellCmd,
@@ -371,7 +378,7 @@ cliParser.add_argument('-v', '--verbose',
         default=0,
         action='count',
         help='increase the level of output as the program executes')
-cliParser.add_argument('-q', '--quiet',
+cliParser.add_argument('-Q', '--quiet',
         dest='quietness',
         default=0,
         action='count',
@@ -397,6 +404,11 @@ cliParser.add_argument('-b', '--backlog', metavar='<N>',
         default=DEFAULT_BACKLOG,
         type=int,
         help='number of backlogged connections held by the proxy socket (see man page for listen(), default {:d})'.format(DEFAULT_BACKLOG))
+cliParser.add_argument('-P', '--project', metavar='<PROJECT>',
+        dest='project',
+        default='',
+        type=str,
+        help='SCC project name')
 cliParser.add_argument('-B', '--byte-limit', metavar='<N>',
         dest='byteLimit',
         default=DEFAULT_BYTE_LIMIT,
@@ -411,14 +423,11 @@ cliParser.add_argument('-p', '--listen-port', metavar='<N>',
         default=0,
         type=int,
         help='the client-facing TCP proxy port (default 0 implies a random port is chosen)')
-cliParser.add_argument('-g', '--group', '--workgroup', metavar='<WORKGROUP>',
-        dest='workgroup',
-        default=None,
-        help='the workgroup used to submit the vscode job')
-cliParser.add_argument('-S', '--salloc-arg', metavar='<SLURM-ARG>',
-        dest='sallocArgs',
+cliParser.add_argument('-q', '--qrsh-arg', metavar='<SGE-ARG>',
+        dest='qrshArgs',
         action='append',
-        help='used zero or more times to specify arguments to the salloc command being wrapped (e.g. --partition=<name>, --ntasks=<N>)')
+        help='used zero or more times to specify arguments to the qrsh command being wrapped (e.g. -pe omp N, -l gpus=1). ' +
+             'You can put arguments in quotes, e.g.  -q "-pe omp 4 -P proj_name"')
 
 cliArgs = cliParser.parse_args()
 
@@ -437,22 +446,7 @@ if cliArgs.teeStdoutFile:
 if cliArgs.teeStderrFile:
     teeFiles['stderr'] = open(cliArgs.teeStderrFile.replace('[PID]', str(os.getpid())), 'w')
 
-# If no workgroup was provided, find one for this user:
-if cliArgs.workgroup is None:
-    logging.debug('Looking-up a workgroup for the current user')
-    workgroupLookupProc = subprocess.Popen(['workgroup', '-q', 'workgroups'],
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                text=True
-                            )
-    (workgroupStdout, dummy) = workgroupLookupProc.communicate()
-    # Extract the left-most <gid> <gname> pair:
-    workgroupMatch = re.match(r'^\s*[0-9]+\s*(\S+)', workgroupStdout)
-    if workgroupMatch is None:
-        logging.critical('No workgroup provided and user appears to be a member of no workgroups')
-        exit(errno.EINVAL)
-    cliArgs.workgroup = workgroupMatch.group(1)
-    logging.info('Automatically selected workgroup %s', cliArgs.workgroup)
+
 
 # Run the proxy server:
 asyncio.run(runloop())
