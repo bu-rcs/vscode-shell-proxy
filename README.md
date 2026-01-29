@@ -1,5 +1,67 @@
 # vscode-shell-proxy
 
+Modified for the BU SCC. The command for an interactive job was changed from salloc to qrsh, and the handling of 
+multiple arguments to qrsh was improved.
+
+Usage:
+
+```bash
+$ /usr1/scv/bgregor/bin/vscode-shell-proxy.py -h
+usage: vscode-shell-proxy.py [-h] [-v] [-Q] [-l <PATH>] [-0 <PATH>] [-1 <PATH>] [-2 <PATH>] [-b <N>]
+                             [-P <PROJECT>] [-B <N>] [-H <HOSTNAME>] [-p <N>] [-q <QRSH-ARG>]
+
+vscode remote shell proxy
+
+options:
+  -h, --help            show this help message and exit
+  -v, --verbose         increase the level of output as the program executes
+  -Q, --quiet           decrease the level of output as the program executes
+  -l <PATH>, --log-file <PATH>
+                        direct all logging to this file rather than stderr; the token "[PID]" will be replaced
+                        with the running pid
+  -0 <PATH>, --tee-stdin <PATH>
+                        send a copy of input to the script stdin to this file; the token "[PID]" will be
+                        replaced with the running pid
+  -1 <PATH>, --tee-stdout <PATH>
+                        send a copy of output to the script stdout to this file; the token "[PID]" will be
+                        replaced with the running pid
+  -2 <PATH>, --tee-stderr <PATH>
+                        send a copy of output to the script stderr to this file; the token "[PID]" will be
+                        replaced with the running pid
+  -b <N>, --backlog <N>
+                        number of backlogged connections held by the proxy socket (see man page for listen(),
+                        default 8)
+  -P <PROJECT>, --project <PROJECT>
+                        SCC project name
+  -B <N>, --byte-limit <N>
+                        maximum bytes read at one time per socket (default 4096
+  -H <HOSTNAME>, --listen-host <HOSTNAME>
+                        the client-facing TCP proxy should bind to this interface (default 127.0.0.1; use
+                        0.0.0.0 for all interfaces)
+  -p <N>, --listen-port <N>
+                        the client-facing TCP proxy port (default 0 implies a random port is chosen)
+  -q <QRSH-ARG>, --qrsh-arg <QRSH-ARG>
+                        used zero or more times to specify arguments to the qrsh command being wrapped (e.g.
+                        -pe omp N, -l gpus=1). You can put arguments in quotes, e.g. -q "-pe omp 4 -P
+                        proj_name"
+```
+
+Example ssh config file for VS Code:
+
+```
+Host SCC
+    HostName scc2.bu.edu
+    User username
+    RemoteCommand /path/to/vscode-shell-proxy.py -q="-P bg-rcs" 
+
+Host SCC-gpu
+    HostName scc2.bu.edu
+    User username
+    RemoteCommand /path/to/vscode-shell-proxy.py -q="-P proj_name -pe omp 4 -l gpus=1 -l gpu_c=8.0"
+```
+
+
+## Below is the original README.md
 Microsoft's Visual Studio Code (vscode) application has a **Remote-SSH** extension that allows for remote execution of code.  This is intended to allow the developer to edit/run/debug in the (eventual) target environment or access hardware not present in the local host (e.g. GPUs).
 
 There are several issues with this when the target environment is an HPC cluster:
