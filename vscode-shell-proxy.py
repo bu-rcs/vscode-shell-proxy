@@ -423,7 +423,7 @@ cliParser.add_argument('-p', '--listen-port', metavar='<N>',
         default=0,
         type=int,
         help='the client-facing TCP proxy port (default 0 implies a random port is chosen)')
-cliParser.add_argument('-q', '--qrsh-arg', metavar='<SGE-ARG>',
+cliParser.add_argument('-q', '--qrsh-arg', metavar='<QRSH-ARG>',
         dest='qrshArgs',
         action='append',
         help='used zero or more times to specify arguments to the qrsh command being wrapped (e.g. -pe omp N, -l gpus=1). ' +
