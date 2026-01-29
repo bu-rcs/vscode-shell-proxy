@@ -17,6 +17,8 @@
 # and communicates with that; this script accepts connections on that port and proxies
 # them to the actual TCP listener on the compute node.
 #
+#  Original code is from:  https://github.com/jtfrey/vscode-shell-proxy
+#
 
 import asyncio
 import time
