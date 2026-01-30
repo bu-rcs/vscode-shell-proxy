@@ -52,7 +52,7 @@ Example ssh config file for VS Code:
 Host SCC
     HostName scc2.bu.edu
     User username
-    RemoteCommand /path/to/vscode-shell-proxy.py -q="-P bg-rcs" 
+    RemoteCommand /path/to/vscode-shell-proxy.py -q="-P proj_name" 
 
 Host SCC-gpu
     HostName scc2.bu.edu
