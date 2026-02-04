@@ -15,7 +15,7 @@ Host scc-1-core
 Host scc-1-gpu
     HostName scc2.bu.edu
     User your_username
-    RemoteCommand vscode-shell-proxy.py -q="-P your_project -l gpus=1 -l gpu_c=8.0 -pe omp 4"
+    RemoteCommand vscode-shell-proxy.py -q="-now no -P your_project -l gpus=1 -l gpu_c=8.0 -pe omp 4"
 ```
 
 ## Remote-SSH config
